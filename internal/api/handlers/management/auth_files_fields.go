@@ -773,7 +773,13 @@ func syncAuthFileWebsocketsAttribute(auth *coreauth.Auth) {
 	}
 	websockets, ok := authFileBoolValue(auth.Metadata["websockets"])
 	if !ok {
-		delete(auth.Attributes, "websockets")
+		// Codex subscription credentials default to websockets enabled,
+		// matching auth file synthesis; other providers stay off by default.
+		if strings.EqualFold(strings.TrimSpace(auth.Provider), "codex") {
+			auth.Attributes["websockets"] = "true"
+		} else {
+			delete(auth.Attributes, "websockets")
+		}
 		return
 	}
 	auth.Attributes["websockets"] = strconv.FormatBool(websockets)

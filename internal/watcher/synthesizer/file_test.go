@@ -133,6 +133,68 @@ func TestFileSynthesizer_Synthesize_ValidAuthFile(t *testing.T) {
 	}
 }
 
+func TestFileSynthesizer_Synthesize_CodexWebsocketsDefault(t *testing.T) {
+	cases := []struct {
+		name          string
+		metadata      map[string]any
+		wantAttribute string
+		wantPresent   bool
+	}{
+		{
+			name:          "absent flag defaults to enabled",
+			metadata:      map[string]any{"type": "codex", "email": "sub@example.com"},
+			wantAttribute: "true",
+			wantPresent:   true,
+		},
+		{
+			name:        "explicit false is preserved",
+			metadata:    map[string]any{"type": "codex", "email": "sub@example.com", "websockets": false},
+			wantPresent: false,
+		},
+		{
+			name:        "explicit true stays in metadata only",
+			metadata:    map[string]any{"type": "codex", "email": "sub@example.com", "websockets": true},
+			wantPresent: false,
+		},
+		{
+			name:        "non-codex providers keep no default",
+			metadata:    map[string]any{"type": "claude", "email": "sub@example.com"},
+			wantPresent: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			data, _ := json.Marshal(tc.metadata)
+			if errWrite := os.WriteFile(filepath.Join(tempDir, "auth.json"), data, 0644); errWrite != nil {
+				t.Fatalf("failed to write auth file: %v", errWrite)
+			}
+			synth := NewFileSynthesizer()
+			ctx := &SynthesisContext{
+				Config:      &config.Config{},
+				AuthDir:     tempDir,
+				Now:         time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+				IDGenerator: NewStableIDGenerator(),
+			}
+			auths, errSynthesize := synth.Synthesize(ctx)
+			if errSynthesize != nil {
+				t.Fatalf("unexpected error: %v", errSynthesize)
+			}
+			if len(auths) != 1 {
+				t.Fatalf("expected 1 auth, got %d", len(auths))
+			}
+			got, present := auths[0].Attributes["websockets"]
+			if present != tc.wantPresent {
+				t.Fatalf("websockets attribute present = %v, want %v (value %q)", present, tc.wantPresent, got)
+			}
+			if tc.wantPresent && got != tc.wantAttribute {
+				t.Fatalf("websockets attribute = %q, want %q", got, tc.wantAttribute)
+			}
+		})
+	}
+}
+
 func TestFileSynthesizer_Synthesize_LegacyKimiFingerprintProfile(t *testing.T) {
 	tempDir := t.TempDir()
 	authData := map[string]any{
