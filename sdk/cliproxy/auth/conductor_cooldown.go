@@ -615,6 +615,11 @@ func (m *Manager) ResetQuota(ctx context.Context, authID string) (*Auth, []strin
 	if m.scheduler != nil && snapshot != nil {
 		m.scheduler.upsertAuth(snapshot)
 	}
+	// An explicit quota reset re-arms the credential's one soonest-reset probe,
+	// mirroring the Rust scheduler's reset_cooldowns. Session affinity is untouched.
+	if sel := soonestResetSelectorOf(m.Selector()); sel != nil {
+		sel.OnQuotaReset(authID)
+	}
 	if errPersist != nil {
 		return nil, nil, errPersist
 	}
