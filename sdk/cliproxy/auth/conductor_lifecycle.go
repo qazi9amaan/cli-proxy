@@ -422,6 +422,9 @@ func (m *Manager) Remove(ctx context.Context, id string) {
 	}
 	provider := strings.TrimSpace(existing.Provider)
 	delete(m.auths, id)
+	if sel := soonestResetSelectorOf(m.selector); sel != nil {
+		sel.retainRegisteredProbes(m.auths)
+	}
 	m.notifyAuthChangeLocked(id)
 	if m.modelPoolOffsets != nil {
 		delete(m.modelPoolOffsets, id)
@@ -528,6 +531,10 @@ func (m *Manager) Load(ctx context.Context) error {
 			auth.CredentialVersion = 1
 		}
 		m.auths[auth.ID] = auth.Clone()
+	}
+
+	if sel := soonestResetSelectorOf(m.selector); sel != nil {
+		sel.retainRegisteredProbes(m.auths)
 	}
 
 	type removalTombstone struct {

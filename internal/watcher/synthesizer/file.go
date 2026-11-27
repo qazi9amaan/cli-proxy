@@ -255,6 +255,13 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) ([
 	}
 	// For codex auth files, extract plan_type from metadata or JWT id_token.
 	if provider == "codex" {
+		// Codex subscription credentials default to the websocket transport so
+		// downstream websocket clients get end-to-end passthrough instead of
+		// per-message HTTP bridging. An explicit "websockets" value in the auth
+		// file overrides the default.
+		if _, hasWebsockets := metadata["websockets"]; !hasWebsockets {
+			a.Attributes["websockets"] = "true"
+		}
 		if ptRaw, ok := metadata["plan_type"].(string); ok && strings.TrimSpace(ptRaw) != "" {
 			a.Attributes["plan_type"] = strings.TrimSpace(ptRaw)
 		} else if idTokenRaw, ok := metadata["id_token"].(string); ok && strings.TrimSpace(idTokenRaw) != "" {
