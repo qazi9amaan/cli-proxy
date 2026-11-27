@@ -21,6 +21,12 @@ logs
 conv
 config.yaml
 
+# Local environment secrets and private keys
+.env
+.env.*
+*.pem
+*.key
+
 # Development/editor
 bin
 .vscode
